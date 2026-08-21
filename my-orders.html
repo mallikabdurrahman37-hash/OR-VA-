@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Orders — ORÈVA</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main>
+  <section class="section-tight">
+    <div class="container">
+      <span class="eyebrow">Your History</span>
+      <h1 class="h-display h2">My Orders</h1>
+    </div>
+  </section>
+
+  <section class="section-tight">
+    <div class="container" style="max-width:760px">
+      <div id="signin-needed" class="empty-state" hidden>
+        <p class="h4">Sign in to see your orders</p>
+        <p class="small mt-1">Orders placed as a guest can still be tracked using your Order ID.</p>
+        <a href="account.html" class="btn btn-primary mt-3">Sign In</a>
+        <a href="track-order.html" class="btn btn-ghost">Track by Order ID</a>
+      </div>
+      <div id="orders-loading" class="text-center" hidden><p class="small">Loading your orders…</p></div>
+      <div id="orders-empty" class="empty-state" hidden>
+        <p class="h4">No orders yet</p>
+        <a href="shop.html" class="btn btn-primary mt-3">Start Shopping</a>
+      </div>
+      <div id="orders-list"></div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<style>
+  .order-row{
+    display:flex; justify-content:space-between; align-items:center; gap:1rem;
+    padding:1.1rem; border:1px solid var(--line); border-radius:var(--radius-md);
+    background:var(--white); margin-bottom:0.8rem; flex-wrap:wrap;
+  }
+  .order-row-left .order-num{ font-weight:600; }
+  .order-row-left .small{ margin-top:0.15rem; }
+</style>
+
+<script type="module">
+  import { renderHeader, renderFooter, applyBackground, formatDate, formatINR } from './js/ui.js';
+  import { onUserReady } from './js/auth.js';
+  import { fetchOrdersForUser } from './js/orders.js';
+
+  renderHeader('');
+  renderFooter();
+  applyBackground();
+
+  onUserReady(async (user) => {
+    if (!user || user.isAnonymous) {
+      document.getElementById('signin-needed').hidden = false;
+      return;
+    }
+    document.getElementById('orders-loading').hidden = false;
+    try {
+      const orders = await fetchOrdersForUser(user.uid);
+      document.getElementById('orders-loading').hidden = true;
+      if (!orders.length) { document.getElementById('orders-empty').hidden = false; return; }
+      document.getElementById('orders-list').innerHTML = orders.map(o => `
+        <a class="order-row" href="order-details.html?id=${o.id}">
+          <div class="order-row-left">
+            <div class="order-num">${o.orderNumber || o.id}</div>
+            <div class="small">${formatDate(o.orderDate)} · ${formatINR(o.totalAmount)}</div>
+          </div>
+          <span class="badge-pill ${o.cancelled ? 'status-error' : 'status-active'}">${o.cancelled ? 'Cancelled' : (o.orderStatus || 'Order Placed')}</span>
+        </a>
+      `).join('');
+    } catch (e) {
+      console.error(e);
+      document.getElementById('orders-loading').hidden = true;
+    }
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Track Order — ORÈVA</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main>
+  <section class="section-tight">
+    <div class="container" style="max-width:720px">
+      <span class="eyebrow">Order Status</span>
+      <h1 class="h-display h2">Track Your Order</h1>
+
+      <div class="card mt-3" id="lookup-card">
+        <div class="form-field" style="margin-bottom:0.8rem">
+          <label for="track-input">Order ID</label>
+          <input id="track-input" placeholder="e.g. ORV-2026-4821">
+        </div>
+        <button class="btn btn-primary btn-block" id="track-btn">Track Order</button>
+        <p class="small mt-2">Signed in? <a href="my-orders.html" style="text-decoration:underline">See all your orders</a> instead.</p>
+      </div>
+
+      <div id="track-result" class="mt-3"></div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<style>
+  .timeline{ display:flex; flex-direction:column; gap:0; margin-top:1.5rem; }
+  .t-step{ display:flex; gap:0.9rem; }
+  .t-dot-col{ display:flex; flex-direction:column; align-items:center; }
+  .t-dot{ width:14px; height:14px; border-radius:50%; background:var(--line); flex-shrink:0; margin-top:2px; }
+  .t-step.done .t-dot{ background:var(--moss); }
+  .t-line{ width:2px; flex:1; background:var(--line); min-height:28px; }
+  .t-step.done .t-line{ background:var(--moss); }
+  .t-step:last-child .t-line{ display:none; }
+  .t-label{ padding-bottom:1.4rem; }
+  .t-title{ font-weight:600; font-size:0.92rem; }
+  .t-step.done .t-title{ color:var(--moss-dark); }
+  .t-sub{ font-size:0.8rem; color:var(--ink-soft); }
+</style>
+
+<script type="module">
+  import { renderHeader, renderFooter, applyBackground, formatDate, toast } from './js/ui.js';
+  import { fetchOrderById, STAGES, stageIndex, canCancel, requestCancellation } from './js/orders.js';
+  import { db, collection, getDocs, query, where } from './js/firebase-config.js';
+  import './js/auth.js';
+
+  renderHeader('');
+  renderFooter();
+  applyBackground();
+
+  const params = new URLSearchParams(location.search);
+  const input = document.getElementById('track-input');
+  const resultEl = document.getElementById('track-result');
+  if (params.get('id')) input.value = params.get('id');
+
+  async function findOrder(value){
+    // Try as a Firestore document id first, then fall back to orderNumber lookup.
+    let order = await fetchOrderById(value).catch(() => null);
+    if (order) return order;
+    const q = query(collection(db, 'orders'), where('orderNumber', '==', value.trim().toUpperCase()));
+    const snap = await getDocs(q).catch(() => null);
+    if (snap && !snap.empty) return { id: snap.docs[0].id, ...snap.docs[0].data() };
+    return null;
+  }
+
+  function renderOrder(order){
+    const cancelled = order.cancelled;
+    const idx = cancelled ? -1 : stageIndex(order.orderStatus);
+    resultEl.innerHTML = `
+      <div class="card">
+        <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:0.5rem">
+          <div>
+            <span class="small">Order ID</span>
+            <p class="h4" style="margin-top:0.2rem">${order.orderNumber || order.id}</p>
+          </div>
+          ${cancelled ? `<span class="badge-pill status-error">Cancelled</span>` : `<span class="badge-pill status-active">${order.orderStatus || 'Order Placed'}</span>`}
+        </div>
+
+        ${order.delayNote ? `<div class="card mt-2" style="background:#F3E7D6;border-color:#E4CBA0"><p class="small" style="color:#7A5A24">${order.delayNote}</p></div>` : ''}
+
+        ${!cancelled ? `
+        <div class="timeline">
+          ${STAGES.map((s, i) => `
+            <div class="t-step ${i <= idx ? 'done' : ''}">
+              <div class="t-dot-col"><div class="t-dot"></div><div class="t-line"></div></div>
+              <div class="t-label">
+                <div class="t-title">${s}</div>
+                ${i === 0 ? `<div class="t-sub">Expected delivery: ${formatDate(order.expectedDelivery)}</div>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>` : `<p class="small mt-2">This order was cancelled before shipment.</p>`}
+
+        ${(order.courierService || order.trackingId) ? `
+        <div class="card mt-2">
+          <p class="small" style="font-weight:600;color:var(--ink)">Courier: ${order.courierService || '—'}</p>
+          <div class="flex items-center gap-sm mt-1">
+            <span class="small">Tracking ID: <strong>${order.trackingId || '—'}</strong></span>
+            <button class="btn btn-ghost btn-sm" id="copy-tracking">Copy</button>
+          </div>
+        </div>` : ''}
+
+        <div class="mt-3" id="cancel-zone"></div>
+      </div>
+    `;
+
+    document.getElementById('copy-tracking')?.addEventListener('click', () => {
+      navigator.clipboard?.writeText(order.trackingId || '');
+      toast('Tracking ID copied');
+    });
+
+    const cancelZone = document.getElementById('cancel-zone');
+    if (!cancelled && canCancel(order)) {
+      cancelZone.innerHTML = `<button class="btn btn-danger btn-block" id="cancel-btn">Cancel Order</button>`;
+      document.getElementById('cancel-btn').addEventListener('click', async () => {
+        if (!confirm('Cancel this order? This cannot be undone.')) return;
+        const res = await requestCancellation(order.id);
+        if (res.ok) { toast('Order cancelled'); const fresh = await fetchOrderById(order.id); renderOrder(fresh); }
+        else toast(res.reason);
+      });
+    }
+  }
+
+  async function doLookup(){
+    const value = input.value.trim();
+    if (!value) { toast('Enter your Order ID'); return; }
+    resultEl.innerHTML = `<p class="small">Searching…</p>`;
+    const order = await findOrder(value);
+    if (!order) { resultEl.innerHTML = `<div class="empty-state"><p class="h4">No order found</p><p class="small mt-1">Check your Order ID and try again.</p></div>`; return; }
+    renderOrder(order);
+  }
+
+  document.getElementById('track-btn').addEventListener('click', doLookup);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') doLookup(); });
+  if (params.get('id')) doLookup();
+</script>
+
+</body>
+</html>

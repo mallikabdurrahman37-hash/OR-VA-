@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Your Cart — ORÈVA</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main>
+  <section class="section-tight">
+    <div class="container">
+      <span class="eyebrow">Your Selection</span>
+      <h1 class="h-display h2">Cart</h1>
+    </div>
+  </section>
+
+  <section class="section-tight">
+    <div class="container">
+      <div id="cart-empty" class="empty-state" hidden>
+        <p class="h4">Your cart is empty</p>
+        <p class="small mt-1">Explore the collection and find something you'll wear often.</p>
+        <a href="shop.html" class="btn btn-primary mt-3">Shop Now</a>
+      </div>
+
+      <div class="cart-layout" id="cart-layout" hidden>
+        <div class="cart-lines" id="cart-lines"></div>
+        <aside class="cart-summary card">
+          <h3 class="h4 mb-2">Order Summary</h3>
+          <div class="summary-row"><span>Subtotal</span><span id="sum-subtotal"></span></div>
+          <div class="summary-row"><span>Shipping</span><span id="sum-shipping"></span></div>
+          <hr class="divider">
+          <div class="summary-row summary-total"><span>Total</span><span id="sum-total"></span></div>
+          <p class="small mt-1">Pay by Cash on Delivery. No online payment required.</p>
+          <a href="checkout.html" class="btn btn-primary btn-block mt-3">Proceed to Checkout</a>
+          <a href="shop.html" class="btn btn-ghost btn-block">Continue Shopping</a>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<style>
+  .cart-layout{ display:grid; gap:1.5rem; grid-template-columns:1fr; align-items:start; }
+  @media (min-width:900px){ .cart-layout{ grid-template-columns: 1.7fr 1fr; gap:2.5rem; } }
+  .cart-line{
+    display:grid; grid-template-columns: 84px 1fr; gap:0.9rem;
+    padding:1rem 0; border-bottom:1px solid var(--line);
+  }
+  .cart-line img{ width:84px; height:104px; object-fit:cover; border-radius:var(--radius-sm); background:var(--paper-2); }
+  .cart-line-name{ font-weight:500; font-size:0.95rem; }
+  .cart-line-meta{ font-size:0.8rem; color:var(--ink-soft); margin-top:0.2rem; }
+  .cart-line-row{ display:flex; justify-content:space-between; align-items:center; margin-top:0.6rem; gap:0.6rem; flex-wrap:wrap; }
+  .cart-qty{ display:flex; align-items:center; border:1px solid var(--line); border-radius:var(--radius-sm); }
+  .cart-qty button{ width:32px; height:32px; background:none; border:none; font-size:1rem; }
+  .cart-qty span{ width:26px; text-align:center; font-size:0.85rem; }
+  .cart-remove{ background:none; border:none; color:var(--error); font-size:0.8rem; text-decoration:underline; padding:0; }
+  .summary-row{ display:flex; justify-content:space-between; font-size:0.92rem; padding:0.35rem 0; color:var(--ink-soft); }
+  .summary-total{ color:var(--ink); font-weight:700; font-size:1.05rem; }
+</style>
+
+<script type="module">
+  import { renderHeader, renderFooter, applyBackground, formatINR, toast } from './js/ui.js';
+  import { getCart, updateQty, removeFromCart, cartTotals } from './js/cart.js';
+  import './js/auth.js';
+
+  renderHeader('cart.html');
+  renderFooter();
+  applyBackground();
+
+  function render(){
+    const cart = getCart();
+    document.getElementById('cart-empty').hidden = cart.length > 0;
+    document.getElementById('cart-layout').hidden = cart.length === 0;
+    if (!cart.length) return;
+
+    document.getElementById('cart-lines').innerHTML = cart.map(item => `
+      <div class="cart-line">
+        <img src="${item.image || ''}" alt="${item.name}">
+        <div>
+          <div class="cart-line-name">${item.name}</div>
+          <div class="cart-line-meta">${item.size ? 'Size: ' + item.size : ''} ${item.size ? '· ' : ''}${formatINR(item.price)} each</div>
+          <div class="cart-line-row">
+            <div class="cart-qty">
+              <button data-act="minus" data-id="${item.id}" data-size="${item.size||''}">&minus;</button>
+              <span>${item.qty}</span>
+              <button data-act="plus" data-id="${item.id}" data-size="${item.size||''}">+</button>
+            </div>
+            <button class="cart-remove" data-act="remove" data-id="${item.id}" data-size="${item.size||''}">Remove</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    const { subtotal, shippingCharge, total } = cartTotals();
+    document.getElementById('sum-subtotal').textContent = formatINR(subtotal);
+    document.getElementById('sum-shipping').textContent = shippingCharge > 0 ? formatINR(shippingCharge) : 'Free';
+    document.getElementById('sum-total').textContent = formatINR(total);
+
+    document.querySelectorAll('[data-act]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const { act, id, size } = btn.dataset;
+        const cart = getCart();
+        const line = cart.find(c => c.id === id && c.size === size);
+        if (!line) return;
+        if (act === 'plus') updateQty(id, size, line.qty + 1);
+        if (act === 'minus') { if (line.qty <= 1) { removeFromCart(id, size); } else { updateQty(id, size, line.qty - 1); } }
+        if (act === 'remove') { removeFromCart(id, size); toast('Removed from cart'); }
+        render();
+      });
+    });
+  }
+
+  window.addEventListener('oreva:cart-updated', render);
+  render();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,86 @@
+rules_version = '2';
+
+// =========================================================
+// ORÈVA — Firestore Security Rules
+// Preserves the existing baseline (public reads / admin-only
+// writes for catalog data; users own their profile; anonymous
+// visitor docs tied to their own auth uid) and extends it for
+// orders + settings. Admins are identified via a custom claim
+// (`admin: true`) set on their auth token — do not store an
+// admin flag in a client-writable document.
+// =========================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ---------- products ----------
+    // Public read (storefront browsing). Only admin can write.
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---------- users ----------
+    // A user may read/update their own profile. Admin may read all.
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create, update: if isOwner(uid);
+      allow delete: if isAdmin();
+    }
+
+    // ---------- settings/store ----------
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---------- visitor_ids ----------
+    // Created by the anonymous-visitor flow; a visitor may only
+    // manage their own document, keyed to their own auth uid.
+    match /visitor_ids/{visitorId} {
+      allow read, write: if isSignedIn() &&
+        (visitorId == request.auth.uid || resource.data.authUid == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.authUid == request.auth.uid;
+    }
+
+    // ---------- orders ----------
+    match /orders/{orderId} {
+      // A signed-in user may read their own orders; admin reads all.
+      allow read: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      // Order creation: the authenticated caller must own the order,
+      // payment is always COD, and it must start un-shipped/un-cancelled.
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.paymentMethod == 'COD'
+        && request.resource.data.cancelled == false
+        && request.resource.data.orderStatus == 'Order Placed';
+
+      // Admin may update anything (status, courier, tracking, delay notes).
+      allow update: if isAdmin() ||
+        (
+          // Customer self-service cancellation: only allowed pre-shipment,
+          // only flips `cancelled` (+ leaves an explanatory note), and only
+          // on an order that has not shipped yet.
+          isSignedIn() &&
+          resource.data.userId == request.auth.uid &&
+          resource.data.cancelled == false &&
+          resource.data.orderStatus in ['Order Placed', 'Order Confirmed'] &&
+          request.resource.data.cancelled == true &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['cancelled', 'orderStatus', 'delayNote'])
+        );
+
+      allow delete: if false;
+    }
+  }
+}

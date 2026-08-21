@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Order Confirmed — ORÈVA</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main>
+  <section class="section">
+    <div class="container" style="max-width:720px">
+      <div id="oc-loading" class="text-center"><p class="small">Loading your order…</p></div>
+
+      <div id="oc-content" hidden>
+        <div class="text-center">
+          <span class="eyebrow">Thank You</span>
+          <h1 class="h-display h2">Your order is placed</h1>
+          <p class="lede text-center mt-1" style="margin-inline:auto">We're preparing it now. You'll pay <strong>Cash on Delivery</strong> when it arrives.</p>
+        </div>
+
+        <div class="card mt-4">
+          <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:0.5rem">
+            <div>
+              <span class="small">Order ID</span>
+              <p class="h4" id="oc-order-number" style="margin-top:0.2rem"></p>
+            </div>
+            <div class="text-center">
+              <span class="small">Expected Delivery</span>
+              <p class="h4" id="oc-expected" style="margin-top:0.2rem"></p>
+            </div>
+          </div>
+          <hr class="divider">
+          <div id="oc-lines"></div>
+          <hr class="divider">
+          <div class="summary-row"><span>Subtotal</span><span id="oc-subtotal"></span></div>
+          <div class="summary-row"><span>Shipping</span><span id="oc-shipping"></span></div>
+          <div class="summary-row summary-total"><span>Total</span><span id="oc-total"></span></div>
+        </div>
+
+        <div class="card mt-2">
+          <span class="small" style="font-weight:600;color:var(--ink)">Delivering To</span>
+          <p class="small mt-1" id="oc-address"></p>
+        </div>
+
+        <div class="oc-actions mt-3">
+          <a href="track-order.html" class="btn btn-outline" id="oc-track-link">Track Order</a>
+          <a href="shop.html" class="btn btn-primary">Continue Shopping</a>
+        </div>
+      </div>
+
+      <div id="oc-notfound" class="text-center" hidden>
+        <p class="h4">We couldn't find that order</p>
+        <a href="shop.html" class="btn btn-primary mt-3">Back to Shop</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<style>
+  .summary-row{ display:flex; justify-content:space-between; font-size:0.92rem; padding:0.3rem 0; color:var(--ink-soft); }
+  .summary-total{ color:var(--ink); font-weight:700; }
+  .oc-line{ display:flex; justify-content:space-between; font-size:0.85rem; padding:0.25rem 0; }
+  .oc-actions{ display:flex; gap:0.8rem; flex-wrap:wrap; justify-content:center; }
+</style>
+
+<script type="module">
+  import { renderHeader, renderFooter, applyBackground, formatINR, formatDate } from './js/ui.js';
+  import { fetchOrderById } from './js/orders.js';
+  import './js/auth.js';
+
+  renderHeader('');
+  renderFooter();
+  applyBackground();
+
+  const id = new URLSearchParams(location.search).get('id');
+
+  (async () => {
+    const order = id ? await fetchOrderById(id).catch(() => null) : null;
+    document.getElementById('oc-loading').hidden = true;
+    if (!order) { document.getElementById('oc-notfound').hidden = false; return; }
+
+    document.getElementById('oc-content').hidden = false;
+    document.getElementById('oc-order-number').textContent = order.orderNumber || order.id;
+    document.getElementById('oc-expected').textContent = formatDate(order.expectedDelivery);
+    document.getElementById('oc-lines').innerHTML = (order.items || []).map(it => `
+      <div class="oc-line"><span>${it.name}${it.size ? ' ('+it.size+')' : ''} × ${it.qty}</span><span>${formatINR(it.price*it.qty)}</span></div>
+    `).join('');
+    document.getElementById('oc-subtotal').textContent = formatINR(order.subtotal);
+    document.getElementById('oc-shipping').textContent = order.shippingCharge > 0 ? formatINR(order.shippingCharge) : 'Free';
+    document.getElementById('oc-total').textContent = formatINR(order.totalAmount);
+    const a = order.shippingAddress || {};
+    document.getElementById('oc-address').textContent = `${a.name || ''}, ${a.addressLine || ''}, ${a.city || ''}, ${a.state || ''} - ${a.pincode || ''} · ${a.phone || ''}`;
+    document.getElementById('oc-track-link').href = `track-order.html?id=${order.id}`;
+  })();
+</script>
+
+</body>
+</html>

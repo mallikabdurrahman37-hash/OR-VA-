@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FAQ — ORÈVA</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main>
+  <section class="section-tight">
+    <div class="container" style="max-width:760px">
+      <span class="eyebrow">Good to Know</span>
+      <h1 class="h-display h2">Frequently Asked Questions</h1>
+
+      <div class="faq-list mt-3" id="faq-list"></div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<style>
+  .faq-item{ border-bottom:1px solid var(--line); }
+  .faq-q{
+    width:100%; text-align:left; background:none; border:none;
+    padding:1.1rem 0; font-family:var(--font-display); font-size:1.05rem; color:var(--ink);
+    display:flex; justify-content:space-between; align-items:center; gap:1rem;
+  }
+  .faq-a{ max-height:0; overflow:hidden; transition:max-height .3s ease; }
+  .faq-a p{ padding-bottom:1.1rem; color:var(--ink-soft); font-size:0.92rem; }
+  .faq-item.open .faq-a{ max-height:300px; }
+  .faq-plus{ transition:transform .25s ease; flex-shrink:0; }
+  .faq-item.open .faq-plus{ transform:rotate(45deg); }
+</style>
+
+<script type="module">
+  import { renderHeader, renderFooter, applyBackground } from './js/ui.js';
+  renderHeader('');
+  renderFooter();
+  applyBackground();
+
+  const faqs = [
+    ['How does Cash on Delivery work?', 'You place your order online and pay the full amount in cash to the courier when it\u2019s delivered to your door. No card, UPI, or advance payment is needed.'],
+    ['How long does delivery take?', 'Every order has an expected delivery date of 6 days from when it\u2019s placed. You can follow progress anytime on the Track Order page.'],
+    ['When do I get my tracking ID?', 'A courier name and tracking ID appear on your order only once it has shipped — not at the time of placing the order.'],
+    ['Can I cancel my order?', 'Yes, any time before it ships. Once an order has shipped, it can no longer be cancelled through the site; please contact us if you need help.'],
+    ['What if my delivery is delayed?', 'If a delay happens, we\u2019ll add a note directly to your order page explaining what\u2019s happening and, where possible, a revised delivery date.'],
+    ['Can I return or exchange an item?', 'Our returns and exchange process is still under development. We\u2019ll update this page as soon as it\u2019s finalized — thank you for your patience.'],
+    ['Do I need an account to shop?', 'No — you can browse and check out as a guest. Creating an account just makes it easier to see your order history later.'],
+  ];
+
+  document.getElementById('faq-list').innerHTML = faqs.map(([q,a],i) => `
+    <div class="faq-item" data-i="${i}">
+      <button class="faq-q"><span>${q}</span><span class="faq-plus">+</span></button>
+      <div class="faq-a"><p>${a}</p></div>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.faq-item').forEach(item => {
+    item.querySelector('.faq-q').addEventListener('click', () => item.classList.toggle('open'));
+  });
+</script>
+
+</body>
+</html>

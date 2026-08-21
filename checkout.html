@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Checkout — ORÈVA</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main>
+  <section class="section-tight">
+    <div class="container">
+      <span class="eyebrow">Almost There</span>
+      <h1 class="h-display h2">Checkout</h1>
+    </div>
+  </section>
+
+  <section class="section-tight">
+    <div class="container">
+      <div id="checkout-empty" class="empty-state" hidden>
+        <p class="h4">Your cart is empty</p>
+        <a href="shop.html" class="btn btn-primary mt-3">Shop Now</a>
+      </div>
+
+      <form class="checkout-layout" id="checkout-form" hidden>
+        <div class="checkout-fields">
+          <div class="card mb-3">
+            <h3 class="h4 mb-2">Contact Details</h3>
+            <div class="form-field">
+              <label for="f-name">Full Name</label>
+              <input id="f-name" required autocomplete="name">
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-field">
+                <label for="f-email">Email</label>
+                <input id="f-email" type="email" required autocomplete="email">
+              </div>
+              <div class="form-field">
+                <label for="f-phone">Phone</label>
+                <input id="f-phone" type="tel" required autocomplete="tel" placeholder="10-digit mobile number">
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="h4 mb-2">Shipping Address</h3>
+            <div class="form-field">
+              <label for="f-address">Address Line</label>
+              <input id="f-address" required autocomplete="address-line1" placeholder="House no., street, area">
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-field">
+                <label for="f-city">City</label>
+                <input id="f-city" required autocomplete="address-level2">
+              </div>
+              <div class="form-field">
+                <label for="f-state">State</label>
+                <input id="f-state" required autocomplete="address-level1">
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="f-pincode">Pincode</label>
+              <input id="f-pincode" required inputmode="numeric" autocomplete="postal-code" style="max-width:220px">
+            </div>
+          </div>
+        </div>
+
+        <aside class="card checkout-summary">
+          <h3 class="h4 mb-2">Order Summary</h3>
+          <div id="checkout-lines"></div>
+          <hr class="divider">
+          <div class="summary-row"><span>Subtotal</span><span id="co-subtotal"></span></div>
+          <div class="summary-row"><span>Shipping</span><span id="co-shipping"></span></div>
+          <hr class="divider">
+          <div class="summary-row summary-total"><span>Total</span><span id="co-total"></span></div>
+          <div class="cod-note">
+            <strong>Payment: Cash on Delivery</strong>
+            <p class="small mt-1" style="margin:0.3rem 0 0">Pay the full amount to the courier when your order arrives. No card or UPI needed now.</p>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block mt-3" id="place-order-btn">Place Order</button>
+        </aside>
+      </form>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<style>
+  .checkout-layout{ display:grid; gap:1.5rem; grid-template-columns:1fr; align-items:start; }
+  @media (min-width:900px){ .checkout-layout{ grid-template-columns: 1.6fr 1fr; gap:2.5rem; } }
+  .summary-row{ display:flex; justify-content:space-between; font-size:0.92rem; padding:0.35rem 0; color:var(--ink-soft); }
+  .summary-total{ color:var(--ink); font-weight:700; font-size:1.05rem; }
+  .co-line{ display:flex; justify-content:space-between; font-size:0.85rem; padding:0.3rem 0; gap:0.5rem; }
+  .co-line span:first-child{ color:var(--ink-soft); }
+  .cod-note{ background:var(--paper-2); border-radius:var(--radius-sm); padding:0.8rem; margin-top:0.8rem; }
+</style>
+
+<script type="module">
+  import { renderHeader, renderFooter, applyBackground, formatINR, toast } from './js/ui.js';
+  import { getCart, cartTotals, clearCart } from './js/cart.js';
+  import { onUserReady, getCurrentUser } from './js/auth.js';
+  import { createOrder } from './js/orders.js';
+  import { db, doc, getDoc } from './js/firebase-config.js';
+
+  renderHeader('checkout.html');
+  renderFooter();
+  applyBackground();
+
+  const cart = getCart();
+  if (!cart.length) {
+    document.getElementById('checkout-empty').hidden = false;
+  } else {
+    document.getElementById('checkout-form').hidden = false;
+    document.getElementById('checkout-lines').innerHTML = cart.map(item => `
+      <div class="co-line"><span>${item.name}${item.size ? ' ('+item.size+')' : ''} × ${item.qty}</span><span>${formatINR(item.price*item.qty)}</span></div>
+    `).join('');
+    const { subtotal, shippingCharge, total } = cartTotals();
+    document.getElementById('co-subtotal').textContent = formatINR(subtotal);
+    document.getElementById('co-shipping').textContent = shippingCharge > 0 ? formatINR(shippingCharge) : 'Free';
+    document.getElementById('co-total').textContent = formatINR(total);
+  }
+
+  onUserReady(async (user) => {
+    if (user && !user.isAnonymous) {
+      document.getElementById('f-email').value = user.email || '';
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        if (snap.exists()) document.getElementById('f-name').value = snap.data().profileName || '';
+      } catch(e){}
+    }
+  });
+
+  document.getElementById('checkout-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('place-order-btn');
+    btn.disabled = true;
+    btn.textContent = 'Placing Order…';
+
+    const name = document.getElementById('f-name').value.trim();
+    const email = document.getElementById('f-email').value.trim();
+    const phone = document.getElementById('f-phone').value.trim();
+    const address = document.getElementById('f-address').value.trim();
+    const city = document.getElementById('f-city').value.trim();
+    const state = document.getElementById('f-state').value.trim();
+    const pincode = document.getElementById('f-pincode').value.trim();
+
+    if (!/^[0-9]{10}$/.test(phone.replace(/\D/g,'').slice(-10))) {
+      toast('Please enter a valid 10-digit phone number');
+      btn.disabled = false; btn.textContent = 'Place Order';
+      return;
+    }
+
+    const cart = getCart();
+    const { subtotal, shippingCharge } = cartTotals();
+    const items = cart.map(c => ({ productId: c.id, name: c.name, price: c.price, qty: c.qty, size: c.size || '', image: c.image || '' }));
+
+    try {
+      const user = getCurrentUser();
+      const order = await createOrder({
+        user, customerName: name, customerEmail: email, phone,
+        shippingAddress: { name, phone, addressLine: address, city, state, pincode },
+        items, subtotal, shippingCharge,
+      });
+      clearCart();
+      window.location.href = `order-confirmation.html?id=${order.id}`;
+    } catch (err) {
+      console.error(err);
+      toast('Could not place your order. Please try again.');
+      btn.disabled = false;
+      btn.textContent = 'Place Order';
+    }
+  });
+</script>
+
+</body>
+</html>

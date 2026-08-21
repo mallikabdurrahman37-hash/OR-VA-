@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contact — ORÈVA</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main>
+  <section class="section-tight">
+    <div class="container">
+      <span class="eyebrow">We'd Love to Hear From You</span>
+      <h1 class="h-display h2">Contact ORÈVA</h1>
+    </div>
+  </section>
+
+  <section class="section-tight">
+    <div class="container contact-grid">
+      <div class="contact-links">
+        <a class="contact-row" id="c-whatsapp" target="_blank" rel="noopener">
+          <span class="h4">WhatsApp</span><span class="small">+91 9239529167</span>
+        </a>
+        <a class="contact-row" id="c-phone">
+          <span class="h4">Call</span><span class="small">+91 9239529167</span>
+        </a>
+        <a class="contact-row" id="c-email">
+          <span class="h4">Email</span><span class="small">mallikabdurrahman37@gmail.com</span>
+        </a>
+        <a class="contact-row" id="c-insta" target="_blank" rel="noopener">
+          <span class="h4">Instagram</span><span class="small">@mallik.abdur</span>
+        </a>
+        <a class="contact-row" id="c-yt" target="_blank" rel="noopener">
+          <span class="h4">YouTube</span><span class="small">Ayat Serenity</span>
+        </a>
+        <div class="contact-row" style="cursor:default">
+          <span class="h4">Address</span><span class="small">Ashiana Complex near SM memorial school, Hooghly, WB 712701</span>
+        </div>
+      </div>
+
+      <form class="card" id="contact-form">
+        <h3 class="h4 mb-2">Send a Message</h3>
+        <div class="form-field"><label for="cf-name">Name</label><input id="cf-name" required></div>
+        <div class="form-field"><label for="cf-email">Email</label><input id="cf-email" type="email" required></div>
+        <div class="form-field"><label for="cf-msg">Message</label><textarea id="cf-msg" rows="4" required></textarea></div>
+        <button class="btn btn-primary btn-block" type="submit">Send via Email</button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<style>
+  .contact-grid{ display:grid; gap:1.5rem; grid-template-columns:1fr; }
+  @media (min-width:800px){ .contact-grid{ grid-template-columns: 1fr 1fr; gap:2.5rem; } }
+  .contact-links{ display:flex; flex-direction:column; gap:0.7rem; }
+  .contact-row{
+    display:flex; flex-direction:column; gap:0.15rem;
+    padding:1rem 1.2rem; border:1px solid var(--line); border-radius:var(--radius-md);
+    background:var(--white);
+  }
+</style>
+
+<script type="module">
+  import { renderHeader, renderFooter, applyBackground, CONTACT } from './js/ui.js';
+  renderHeader('contact.html');
+  renderFooter();
+  applyBackground();
+
+  document.getElementById('c-whatsapp').href = `https://wa.me/${CONTACT.whatsapp}`;
+  document.getElementById('c-phone').href = `tel:${CONTACT.phone.replace(/\s/g,'')}`;
+  document.getElementById('c-email').href = `mailto:${CONTACT.email}`;
+  document.getElementById('c-insta').href = CONTACT.instagram;
+  document.getElementById('c-yt').href = CONTACT.youtube;
+
+  document.getElementById('contact-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('cf-name').value;
+    const email = document.getElementById('cf-email').value;
+    const msg = document.getElementById('cf-msg').value;
+    const subject = encodeURIComponent(`ORÈVA — Message from ${name}`);
+    const body = encodeURIComponent(`${msg}\n\n— ${name} (${email})`);
+    window.location.href = `mailto:${CONTACT.email}?subject=${subject}&body=${body}`;
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shop — ORÈVA</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main>
+  <section class="section-tight">
+    <div class="container">
+      <span class="eyebrow" id="shop-eyebrow">Full Collection</span>
+      <h1 class="h-display h2" id="shop-title">Shop All</h1>
+    </div>
+  </section>
+
+  <section class="section-tight shop-toolbar">
+    <div class="container toolbar-row">
+      <div class="toolbar-left">
+        <button class="btn btn-outline btn-sm" id="filter-toggle">Filters</button>
+        <span class="small" id="result-count"></span>
+      </div>
+      <select id="sort-select" class="sort-select">
+        <option value="">Sort: Featured</option>
+        <option value="price-asc">Price: Low to High</option>
+        <option value="price-desc">Price: High to Low</option>
+        <option value="newest">Newest</option>
+      </select>
+    </div>
+    <div class="filter-panel" id="filter-panel" hidden>
+      <div class="filter-chips" id="category-chips"></div>
+    </div>
+  </section>
+
+  <section class="section-tight">
+    <div class="container">
+      <div class="product-grid" id="product-grid">
+        <div class="skeleton" style="aspect-ratio:4/5"></div>
+        <div class="skeleton" style="aspect-ratio:4/5"></div>
+        <div class="skeleton" style="aspect-ratio:4/5"></div>
+        <div class="skeleton" style="aspect-ratio:4/5"></div>
+        <div class="skeleton" style="aspect-ratio:4/5"></div>
+        <div class="skeleton" style="aspect-ratio:4/5"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<style>
+  .toolbar-row{ display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  .toolbar-left{ display:flex; align-items:center; gap:0.8rem; }
+  .sort-select{
+    padding:0.6rem 0.8rem; border:1px solid var(--line); border-radius:var(--radius-sm);
+    background:var(--white); font-size:0.85rem; color:var(--ink);
+  }
+  .filter-panel{ margin-top:1rem; }
+  .filter-chips{ display:flex; flex-wrap:wrap; gap:0.6rem; }
+  .chip{
+    padding:0.5rem 1rem; border:1px solid var(--line); border-radius:99px;
+    font-size:0.82rem; background:var(--white); color:var(--ink-soft);
+  }
+  .chip.active{ background:var(--moss); color:var(--paper); border-color:var(--moss); }
+</style>
+
+<script type="module">
+  import { renderHeader, renderFooter, applyBackground, wireWishlistButtons } from './js/ui.js';
+  import { fetchAllProducts, filterAndSort, productCardHTML } from './js/products.js';
+  import './js/auth.js';
+
+  renderHeader('shop.html');
+  renderFooter();
+  applyBackground();
+
+  const params = new URLSearchParams(location.search);
+  let allProducts = [];
+  let activeCategory = params.get('category') || '';
+  let searchTerm = params.get('q') || '';
+  const filterFlag = params.get('filter') || '';
+
+  const grid = document.getElementById('product-grid');
+  const titleEl = document.getElementById('shop-title');
+  const eyebrowEl = document.getElementById('shop-eyebrow');
+  const countEl = document.getElementById('result-count');
+  const chipsEl = document.getElementById('category-chips');
+  const sortSelect = document.getElementById('sort-select');
+
+  if (searchTerm) { titleEl.textContent = `Results for "${searchTerm}"`; eyebrowEl.textContent = 'Search'; }
+  else if (filterFlag === 'new') { titleEl.textContent = 'New Arrivals'; eyebrowEl.textContent = 'Just In'; }
+  else if (filterFlag === 'bestsellers') { titleEl.textContent = 'Best Sellers'; eyebrowEl.textContent = 'Customer Favourites'; }
+  else if (activeCategory) { titleEl.textContent = activeCategory; eyebrowEl.textContent = 'Category'; }
+
+  document.getElementById('filter-toggle').addEventListener('click', () => {
+    const panel = document.getElementById('filter-panel');
+    panel.hidden = !panel.hidden;
+  });
+
+  function render(){
+    let list = filterAndSort(allProducts, { q: searchTerm, sort: sortSelect.value });
+    if (filterFlag === 'new') list = list.filter(p => p.featured);
+    if (filterFlag === 'bestsellers') list = list.filter(p => p.bestSeller);
+    if (activeCategory) list = list.filter(p => p.category === activeCategory);
+
+    countEl.textContent = `${list.length} piece${list.length === 1 ? '' : 's'}`;
+
+    if (!list.length) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <p class="h4">No pieces match yet</p>
+        <p class="small mt-1">Try a different filter or check back soon.</p>
+      </div>`;
+      return;
+    }
+    grid.innerHTML = list.map(productCardHTML).join('');
+    wireWishlistButtons(list);
+  }
+
+  function renderChips(){
+    const categories = [...new Set(allProducts.map(p => p.category).filter(Boolean))];
+    chipsEl.innerHTML = `<button class="chip ${!activeCategory ? 'active' : ''}" data-cat="">All</button>` +
+      categories.map(c => `<button class="chip ${activeCategory === c ? 'active' : ''}" data-cat="${c}">${c}</button>`).join('');
+    chipsEl.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        activeCategory = chip.dataset.cat;
+        chipsEl.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        titleEl.textContent = activeCategory || 'Shop All';
+        render();
+      });
+    });
+  }
+
+  sortSelect.addEventListener('change', render);
+
+  (async () => {
+    try {
+      allProducts = await fetchAllProducts();
+      renderChips();
+      render();
+    } catch (e) {
+      console.error(e);
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">Couldn't load the collection. Please refresh.</div>`;
+    }
+  })();
+</script>
+
+</body>
+</html>

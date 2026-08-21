@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Product — ORÈVA</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main>
+  <div id="product-loading" class="container section-tight">
+    <div class="pdp-grid">
+      <div class="skeleton" style="aspect-ratio:4/5"></div>
+      <div>
+        <div class="skeleton" style="height:2rem;width:70%;margin-bottom:1rem"></div>
+        <div class="skeleton" style="height:1.2rem;width:40%;margin-bottom:2rem"></div>
+        <div class="skeleton" style="height:6rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="product-content" hidden>
+    <section class="section-tight">
+      <div class="container pdp-grid">
+        <div class="pdp-gallery">
+          <div class="pdp-main-media">
+            <img id="pdp-main-img" src="" alt="">
+          </div>
+          <div class="pdp-thumbs" id="pdp-thumbs"></div>
+        </div>
+        <div class="pdp-info">
+          <span class="eyebrow" id="pdp-category"></span>
+          <h1 class="h-display h2" id="pdp-name"></h1>
+          <div class="pdp-price mt-1">
+            <span class="price-now" id="pdp-price" style="font-size:1.3rem"></span>
+            <span class="price-was" id="pdp-compare"></span>
+          </div>
+          <p class="lede mt-2" id="pdp-desc"></p>
+
+          <div class="mt-3" id="pdp-size-wrap" hidden>
+            <label class="small" style="font-weight:600;color:var(--ink)">Size</label>
+            <div class="size-row" id="pdp-sizes"></div>
+          </div>
+
+          <div class="mt-2" id="pdp-stock-note"></div>
+
+          <div class="pdp-actions mt-3">
+            <div class="qty-stepper">
+              <button id="qty-minus" aria-label="Decrease quantity">&minus;</button>
+              <span id="qty-value">1</span>
+              <button id="qty-plus" aria-label="Increase quantity">+</button>
+            </div>
+            <button class="btn btn-primary" id="add-to-cart-btn" style="flex:1">Add to Cart</button>
+            <button class="icon-btn card" id="pdp-wishlist" aria-label="Toggle wishlist" style="border:1px solid var(--line)"></button>
+          </div>
+
+          <div class="card mt-3">
+            <div class="flex items-center gap-sm"><strong class="small" style="color:var(--ink)">Cash on Delivery</strong></div>
+            <p class="small mt-1" id="pdp-shipping-note"></p>
+          </div>
+
+          <div class="mt-3">
+            <a href="shipping-policy.html" class="small" style="text-decoration:underline">Shipping Policy</a> ·
+            <a href="cancellation-policy.html" class="small" style="text-decoration:underline">Cancellation Policy</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <h2 class="h-display h3 mb-2">You may also like</h2>
+        <div class="product-grid" id="related-grid"></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="product-notfound" class="container section text-center" hidden>
+    <p class="h-display h3">We couldn't find that piece</p>
+    <p class="lede text-center mt-1" style="margin-inline:auto">It may have sold out or moved. Explore the current collection instead.</p>
+    <a href="shop.html" class="btn btn-primary mt-3">Back to Shop</a>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<style>
+  .pdp-grid{ display:grid; gap:2rem; grid-template-columns:1fr; }
+  @media (min-width:900px){ .pdp-grid{ grid-template-columns: 1.1fr 0.9fr; gap:3rem; } }
+  .pdp-main-media{
+    aspect-ratio:4/5; background:var(--paper-2); border-radius:var(--radius-md); overflow:hidden;
+    border:1px solid var(--line);
+  }
+  .pdp-main-media img{ width:100%; height:100%; object-fit:cover; }
+  .pdp-thumbs{ display:flex; gap:0.6rem; margin-top:0.7rem; flex-wrap:wrap; }
+  .pdp-thumb{
+    width:64px; height:80px; border-radius:var(--radius-sm); overflow:hidden;
+    border:1px solid var(--line); opacity:0.7; flex-shrink:0;
+  }
+  .pdp-thumb.active{ opacity:1; border-color:var(--moss); }
+  .pdp-thumb img{ width:100%; height:100%; object-fit:cover; }
+  .size-row{ display:flex; gap:0.5rem; margin-top:0.5rem; flex-wrap:wrap; }
+  .size-chip{
+    padding:0.5rem 0.9rem; border:1px solid var(--line); border-radius:var(--radius-sm);
+    font-size:0.85rem; background:var(--white);
+  }
+  .size-chip.active{ border-color:var(--moss); background:var(--moss); color:var(--paper); }
+  .pdp-actions{ display:flex; align-items:center; gap:0.7rem; }
+  .qty-stepper{
+    display:flex; align-items:center; border:1px solid var(--line); border-radius:var(--radius-sm);
+    overflow:hidden; flex-shrink:0;
+  }
+  .qty-stepper button{ width:38px; height:44px; background:var(--white); border:none; font-size:1.1rem; }
+  .qty-stepper span{ width:32px; text-align:center; font-weight:600; font-size:0.9rem; }
+</style>
+
+<script type="module">
+  import { renderHeader, renderFooter, applyBackground, toast, formatINR } from './js/ui.js';
+  import { fetchProductById, fetchAllProducts, productCardHTML } from './js/products.js';
+  import { addToCart, isWishlisted, toggleWishlist } from './js/cart.js';
+  import './js/auth.js';
+
+  renderHeader('shop.html');
+  renderFooter();
+  applyBackground();
+
+  const id = new URLSearchParams(location.search).get('id');
+  let qty = 1;
+  let selectedSize = null;
+  let product = null;
+
+  const HEART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="width:20px;height:20px"><path d="M12 21s-7.5-4.6-10-9.3C.4 8.1 2.4 4.5 6 4c2.1-.3 4 .8 6 3 2-2.2 3.9-3.3 6-3 3.6.5 5.6 4.1 4 7.7C19.5 16.4 12 21 12 21z"/></svg>';
+  const HEART_FILL = '<svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;color:#8C3A2B"><path d="M12 21s-7.5-4.6-10-9.3C.4 8.1 2.4 4.5 6 4c2.1-.3 4 .8 6 3 2-2.2 3.9-3.3 6-3 3.6.5 5.6 4.1 4 7.7C19.5 16.4 12 21 12 21z"/></svg>';
+
+  function paintWishlist(){
+    const btn = document.getElementById('pdp-wishlist');
+    btn.innerHTML = isWishlisted(id) ? HEART_FILL : HEART;
+  }
+
+  function setMainImage(src){
+    document.getElementById('pdp-main-img').src = src;
+    document.querySelectorAll('.pdp-thumb').forEach(t => t.classList.toggle('active', t.dataset.src === src));
+  }
+
+  async function init(){
+    if (!id) return showNotFound();
+    try {
+      product = await fetchProductById(id);
+    } catch(e){ console.error(e); }
+    if (!product) return showNotFound();
+
+    document.getElementById('product-loading').hidden = true;
+    document.getElementById('product-content').hidden = false;
+    document.title = `${product.name} — ORÈVA`;
+
+    document.getElementById('pdp-category').textContent = product.category || 'ORÈVA';
+    document.getElementById('pdp-name').textContent = product.name;
+    document.getElementById('pdp-price').textContent = formatINR(product.price);
+    document.getElementById('pdp-compare').textContent = product.compareAtPrice ? formatINR(product.compareAtPrice) : '';
+    document.getElementById('pdp-desc').textContent = product.description;
+
+    const images = product.images.length ? product.images : [''];
+    setMainImage(images[0]);
+    document.getElementById('pdp-thumbs').innerHTML = images.length > 1
+      ? images.map(src => `<button class="pdp-thumb ${src===images[0]?'active':''}" data-src="${src}"><img src="${src}" alt=""></button>`).join('')
+      : '';
+    document.querySelectorAll('.pdp-thumb').forEach(t => t.addEventListener('click', () => setMainImage(t.dataset.src)));
+
+    if (product.sizes.length) {
+      document.getElementById('pdp-size-wrap').hidden = false;
+      document.getElementById('pdp-sizes').innerHTML = product.sizes.map(s => `<button class="size-chip" data-size="${s}">${s}</button>`).join('');
+      document.querySelectorAll('.size-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          selectedSize = chip.dataset.size;
+          document.querySelectorAll('.size-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+        });
+      });
+    }
+
+    const stockNote = document.getElementById('pdp-stock-note');
+    if (product.stock <= 0) {
+      stockNote.innerHTML = `<span class="badge-pill status-error">Out of Stock</span>`;
+      document.getElementById('add-to-cart-btn').disabled = true;
+    } else if (product.stock <= 5) {
+      stockNote.innerHTML = `<span class="badge-pill status-warn">Only ${product.stock} left</span>`;
+    } else {
+      stockNote.innerHTML = `<span class="badge-pill status-active">In Stock</span>`;
+    }
+
+    document.getElementById('pdp-shipping-note').textContent = product.shippingCharge > 0
+      ? `Pay ${formatINR(product.shippingCharge)} shipping, rest on delivery. No online payment needed.`
+      : `Free shipping on this piece. Pay the full amount on delivery.`;
+
+    paintWishlist();
+    document.getElementById('pdp-wishlist').addEventListener('click', () => {
+      const on = toggleWishlist({ id: product.id, name: product.name, price: product.price, image: images[0] });
+      paintWishlist();
+      toast(on ? 'Added to wishlist' : 'Removed from wishlist');
+    });
+
+    document.getElementById('qty-minus').addEventListener('click', () => { qty = Math.max(1, qty-1); document.getElementById('qty-value').textContent = qty; });
+    document.getElementById('qty-plus').addEventListener('click', () => { qty = Math.min(product.stock || 99, qty+1); document.getElementById('qty-value').textContent = qty; });
+
+    document.getElementById('add-to-cart-btn').addEventListener('click', () => {
+      if (product.sizes.length && !selectedSize) { toast('Please select a size'); return; }
+      addToCart({
+        id: product.id, name: product.name, price: product.price, image: images[0],
+        size: selectedSize, shippingCharge: product.shippingCharge, stock: product.stock, qty,
+      });
+      toast('Added to cart');
+    });
+
+    loadRelated();
+  }
+
+  async function loadRelated(){
+    try {
+      const all = await fetchAllProducts();
+      const related = all.filter(p => p.id !== product.id && p.category === product.category).slice(0, 4);
+      const fallback = related.length ? related : all.filter(p => p.id !== product.id).slice(0, 4);
+      const grid = document.getElementById('related-grid');
+      grid.innerHTML = fallback.length ? fallback.map(productCardHTML).join('') : '';
+      if (!fallback.length) document.querySelector('#related-grid').closest('section').hidden = true;
+    } catch(e){ console.error(e); }
+  }
+
+  function showNotFound(){
+    document.getElementById('product-loading').hidden = true;
+    document.getElementById('product-notfound').hidden = false;
+  }
+
+  init();
+</script>
+
+</body>
+</html>

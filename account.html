@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Account — ORÈVA</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main>
+  <section class="section-tight">
+    <div class="container" style="max-width:480px">
+
+      <div id="guest-view">
+        <span class="eyebrow">Welcome</span>
+        <h1 class="h-display h2" id="auth-title">Sign In</h1>
+
+        <div class="tab-row mt-2">
+          <button class="tab-btn active" data-tab="signin">Sign In</button>
+          <button class="tab-btn" data-tab="signup">Create Account</button>
+        </div>
+
+        <form id="signin-form" class="card mt-3">
+          <div class="form-field"><label for="si-email">Email</label><input id="si-email" type="email" required autocomplete="email"></div>
+          <div class="form-field"><label for="si-pass">Password</label><input id="si-pass" type="password" required autocomplete="current-password"></div>
+          <button class="btn btn-primary btn-block" type="submit">Sign In</button>
+        </form>
+
+        <form id="signup-form" class="card mt-3" hidden>
+          <div class="form-field"><label for="su-name">Full Name</label><input id="su-name" required autocomplete="name"></div>
+          <div class="form-field"><label for="su-email">Email</label><input id="su-email" type="email" required autocomplete="email"></div>
+          <div class="form-field"><label for="su-pass">Password</label><input id="su-pass" type="password" required minlength="6" autocomplete="new-password"></div>
+          <button class="btn btn-primary btn-block" type="submit">Create Account</button>
+        </form>
+
+        <div class="or-divider mt-2"><span>or</span></div>
+        <button class="btn btn-outline btn-block mt-2" id="google-btn">Continue with Google</button>
+        <p class="small text-center mt-2">Browsing without an account? You can still shop — <a href="shop.html" style="text-decoration:underline">continue as guest</a>.</p>
+      </div>
+
+      <div id="user-view" hidden>
+        <span class="eyebrow">Your Account</span>
+        <h1 class="h-display h2" id="user-name">—</h1>
+        <p class="small" id="user-email"></p>
+
+        <div class="account-links mt-3">
+          <a class="account-link" href="my-orders.html">
+            <span>My Orders</span><span aria-hidden="true">&rarr;</span>
+          </a>
+          <a class="account-link" href="wishlist.html">
+            <span>Wishlist</span><span aria-hidden="true">&rarr;</span>
+          </a>
+          <a class="account-link" href="track-order.html">
+            <span>Track an Order</span><span aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+        <button class="btn btn-outline btn-block mt-3" id="signout-btn">Sign Out</button>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<style>
+  .tab-row{ display:flex; border-bottom:1px solid var(--line); }
+  .tab-btn{ flex:1; background:none; border:none; padding:0.8rem; font-size:0.85rem; font-weight:600; color:var(--ink-soft); border-bottom:2px solid transparent; }
+  .tab-btn.active{ color:var(--ink); border-color:var(--moss); }
+  .or-divider{ display:flex; align-items:center; gap:0.8rem; color:var(--ink-soft); font-size:0.8rem; }
+  .or-divider::before, .or-divider::after{ content:''; flex:1; height:1px; background:var(--line); }
+  .account-links{ display:flex; flex-direction:column; gap:0.7rem; }
+  .account-link{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:1rem 1.2rem; border:1px solid var(--line); border-radius:var(--radius-md);
+    background:var(--white); font-weight:500;
+  }
+</style>
+
+<script type="module">
+  import { renderHeader, renderFooter, applyBackground, toast } from './js/ui.js';
+  import { onUserReady, isAnonymous, getCurrentUser, registerWithEmail, loginWithEmail, loginWithGoogle, logout, friendlyAuthError } from './js/auth.js';
+
+  renderHeader('');
+  renderFooter();
+  applyBackground();
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const isSignin = btn.dataset.tab === 'signin';
+      document.getElementById('signin-form').hidden = !isSignin;
+      document.getElementById('signup-form').hidden = isSignin;
+      document.getElementById('auth-title').textContent = isSignin ? 'Sign In' : 'Create Account';
+    });
+  });
+
+  document.getElementById('signin-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await loginWithEmail(document.getElementById('si-email').value, document.getElementById('si-pass').value);
+      toast('Welcome back');
+    } catch (err) { toast(friendlyAuthError(err)); }
+  });
+
+  document.getElementById('signup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await registerWithEmail(document.getElementById('su-email').value, document.getElementById('su-pass').value, document.getElementById('su-name').value);
+      toast('Account created');
+    } catch (err) { toast(friendlyAuthError(err)); }
+  });
+
+  document.getElementById('google-btn').addEventListener('click', async () => {
+    try { await loginWithGoogle(); toast('Signed in with Google'); }
+    catch (err) { toast(friendlyAuthError(err)); }
+  });
+
+  document.getElementById('signout-btn').addEventListener('click', async () => {
+    await logout();
+    toast('Signed out');
+  });
+
+  onUserReady((user) => {
+    const signedIn = user && !user.isAnonymous;
+    document.getElementById('guest-view').hidden = signedIn;
+    document.getElementById('user-view').hidden = !signedIn;
+    if (signedIn) {
+      document.getElementById('user-name').textContent = user.displayName || 'Your Account';
+      document.getElementById('user-email').textContent = user.email || '';
+    }
+  });
+</script>
+
+</body>
+</html>
