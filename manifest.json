@@ -1,0 +1,28 @@
+{
+  "name": "ORÈVA — Considered pieces, made to be worn often",
+  "short_name": "ORÈVA",
+  "description": "ORÈVA is an independent premium studio for considered, everyday pieces.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "portrait-primary",
+  "background_color": "#EFEDE6",
+  "theme_color": "#EFEDE6",
+  "lang": "en-IN",
+  "categories": ["shopping", "lifestyle"],
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
