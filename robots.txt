@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+Disallow: /account.html
+Disallow: /cart.html
+Disallow: /checkout.html
+Disallow: /my-order.html
+Disallow: /order-confirmation.html
+Disallow: /order-details.html
+Disallow: /track-order.html
+Disallow: /wishlist.html
+
+Sitemap: https://orevastore.in/sitemap.xml
