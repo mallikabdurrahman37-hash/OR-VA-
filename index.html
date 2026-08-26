@@ -304,8 +304,8 @@
 
   loadRow(fetchFeatured, 'featured-grid');
   loadRow(fetchBestSellers, 'bestseller-grid');
-  </script>
-  <script>
+  
+ <script>
   document.addEventListener('DOMContentLoaded', () => {
     const slides = document.querySelectorAll('.hero-slider .hero-slide');
 
@@ -319,7 +319,7 @@
       current = (current + 1) % slides.length;
 
       slides[current].classList.add('is-active');
-    }, 2800);
+    }, 3000);
   });
   </script>
 
