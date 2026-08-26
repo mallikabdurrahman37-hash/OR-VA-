@@ -67,11 +67,17 @@
           <a href="about.html" class="btn btn-outline">Our Story</a>
         </div>
       </div>
-      <div class="hero-media">
-  <div class="hero-frame">
-    <img src="hero.png" alt="ORÈVA collection">
+<div class="hero-media">
+  <div class="hero-frame hero-slider" aria-label="ORÈVA collection">
+    
+    <img src="hero.png" alt="ORÈVA collection" class="hero-slide is-active">
+    <img src="hero1.png" alt="" class="hero-slide">
+    <img src="hero2.png" alt="" class="hero-slide">
+    <img src="hero3.png" alt="" class="hero-slide">
+    <img src="hero4.png" alt="" class="hero-slide">
+
   </div>
-      </div>
+</div>
   </section>
 
   <!-- CATEGORIES -->
@@ -185,13 +191,33 @@
     border-radius: var(--radius-md);
     border: 1px solid var(--line);
   }
-  .hero-frame img{
+  .hero-slider{
+  position:relative;
+  overflow:hidden;
+}
+
+.hero-slider .hero-slide{
+  position:absolute;
+  inset:0;
   width:100%;
   height:100%;
   display:block;
   object-fit:cover;
   border-radius:inherit;
+  opacity:0;
+  transition:opacity 0.9s ease-in-out;
+}
+
+.hero-slider .hero-slide.is-active{
+  opacity:1;
+  position:absolute;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .hero-slider .hero-slide{
+    transition:none;
   }
+}
   @media (min-width:900px){ .hero-frame{ aspect-ratio: 5/6; } }
 
   .cat-grid{ display:grid; gap:0.9rem; grid-template-columns: repeat(1, 1fr); }
@@ -275,10 +301,26 @@
       mount.innerHTML = `<div class="empty-state">Couldn't load products right now. Please refresh.</div>`;
     }
   }
-
+</script>
   loadRow(fetchFeatured, 'featured-grid');
   loadRow(fetchBestSellers, 'bestseller-grid');
-</script>
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const slides = document.querySelectorAll('.hero-slider .hero-slide');
+
+    if (slides.length <= 1) return;
+
+    let current = 0;
+
+    setInterval(() => {
+      slides[current].classList.remove('is-active');
+
+      current = (current + 1) % slides.length;
+
+      slides[current].classList.add('is-active');
+    }, 2800);
+  });
+  </script>
 
 </body>
 </html>
