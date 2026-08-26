@@ -307,19 +307,15 @@
 </script> <!-- YE WALA TAG GAYAB THA, MAINE ADD KAR DIYA HAI -->
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const slides = document.querySelectorAll('.hero-slider .hero-slide');
-
-    if (slides.length <= 1) return;
-
-    let current = 0;
-
-    setInterval(() => {
-      slides[current].classList.remove('is-active');
-      current = (current + 1) % slides.length;
-      slides[current].classList.add('is-active');
-    }, 3000);
-  });
+  const slides = document.querySelectorAll('.hero-slider .hero-slide'); 
+if (slides.length > 1) {
+  let current = 0; 
+  setInterval(() => { 
+    slides[current].classList.remove('is-active'); 
+    current = (current + 1) % slides.length; 
+    slides[current].classList.add('is-active'); 
+  }, 3000);
+}
 </script>
 
 </body>
