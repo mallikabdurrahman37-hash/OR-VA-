@@ -304,8 +304,9 @@
 
   loadRow(fetchFeatured, 'featured-grid');
   loadRow(fetchBestSellers, 'bestseller-grid');
-  
- <script>
+</script> <!-- YE WALA TAG GAYAB THA, MAINE ADD KAR DIYA HAI -->
+
+<script>
   document.addEventListener('DOMContentLoaded', () => {
     const slides = document.querySelectorAll('.hero-slider .hero-slide');
 
@@ -315,13 +316,12 @@
 
     setInterval(() => {
       slides[current].classList.remove('is-active');
-
       current = (current + 1) % slides.length;
-
       slides[current].classList.add('is-active');
     }, 3000);
   });
-  </script>
+</script>
 
 </body>
 </html>
+
