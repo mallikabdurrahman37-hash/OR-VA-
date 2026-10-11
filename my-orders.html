@@ -46,12 +46,13 @@
   }
   .order-row-left .order-num{ font-weight:600; }
   .order-row-left .small{ margin-top:0.15rem; }
+  .order-row-badges{ display:flex; gap:0.4rem; flex-wrap:wrap; justify-content:flex-end; }
 </style>
 
 <script type="module">
   import { renderHeader, renderFooter, applyBackground, formatDate, formatINR } from './js/ui.js';
   import { onUserReady } from './js/auth.js';
-  import { fetchOrdersForUser } from './js/orders.js';
+  import { fetchOrdersForUser, verificationBadgeHTML } from './js/orders.js?v=wa1';
 
   renderHeader('');
   renderFooter();
@@ -73,7 +74,10 @@
             <div class="order-num">${o.orderNumber || o.id}</div>
             <div class="small">${formatDate(o.orderDate)} · ${formatINR(o.totalAmount)}</div>
           </div>
-          <span class="badge-pill ${o.cancelled ? 'status-error' : 'status-active'}">${o.cancelled ? 'Cancelled' : (o.orderStatus || 'Order Placed')}</span>
+          <div class="order-row-badges">
+            <span class="badge-pill ${o.cancelled ? 'status-error' : 'status-active'}">${o.cancelled ? 'Cancelled' : (o.orderStatus || 'Order Placed')}</span>
+            ${o.cancelled ? '' : verificationBadgeHTML(o)}
+          </div>
         </a>
       `).join('');
     } catch (e) {
