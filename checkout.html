@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Checkout — ORÈVA</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div id="site-header"></div>
+
+<main>
+  <section class="section-tight">
+    <div class="container">
+      <span class="eyebrow">Almost There</span>
+      <h1 class="h-display h2">Checkout</h1>
+    </div>
+  </section>
+
+  <section class="section-tight">
+    <div class="container">
+      <div id="checkout-empty" class="empty-state" hidden>
+        <p class="h4">Your cart is empty</p>
+        <a href="shop.html" class="btn btn-primary mt-3">Shop Now</a>
+      </div>
+
+      <form class="checkout-layout" id="checkout-form" hidden>
+        <div class="checkout-fields">
+          <div class="card mb-3">
+            <h3 class="h4 mb-2">Contact Details</h3>
+            <div class="form-field">
+              <label for="f-name">Full Name</label>
+              <input id="f-name" required autocomplete="name">
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-field">
+                <label for="f-email">Email</label>
+                <input id="f-email" type="email" required autocomplete="email">
+              </div>
+              <div class="form-field">
+                <label for="f-phone">Phone</label>
+                <input id="f-phone" type="tel" required autocomplete="tel" placeholder="10-digit mobile number">
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="h4 mb-2">Shipping Address</h3>
+            <div class="form-field">
+              <label for="f-address">Address Line</label>
+              <input id="f-address" required autocomplete="address-line1" placeholder="House no., street, area">
+            </div>
+            <div class="form-row form-row-2">
+              <div class="form-field">
+                <label for="f-city">City</label>
+                <input id="f-city" required autocomplete="address-level2">
+              </div>
+              <div class="form-field">
+                <label for="f-state">State</label>
+                <input id="f-state" required autocomplete="address-level1">
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="f-pincode">Pincode</label>
+              <input id="f-pincode" required inputmode="numeric" autocomplete="postal-code" style="max-width:220px">
+            </div>
+          </div>
+        </div>
+
+        <aside class="card checkout-summary">
+          <h3 class="h4 mb-2">Order Summary</h3>
+          <div id="checkout-lines"></div>
+          <hr class="divider">
+          <div class="summary-row"><span>Subtotal</span><span id="co-subtotal"></span></div>
+          <div class="summary-row"><span>Shipping</span><span id="co-shipping"></span></div>
+          <hr class="divider">
+          <div class="summary-row summary-total"><span>Total</span><span id="co-total"></span></div>
+          <div class="cod-note">
+            <strong>Payment: Cash on Delivery</strong>
+            <p class="small mt-1" style="margin:0.3rem 0 0">Pay the full amount to the courier when your order arrives. No card or UPI needed now.</p>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block mt-3" id="place-order-btn">Place Order</button>
+        </aside>
+      </form>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<div id="order-overlay" class="oo" role="dialog" aria-modal="true" aria-labelledby="oo-title" hidden>
+  <div class="oo-box">
+    <div class="oo-spinner" id="oo-spinner" aria-hidden="true"></div>
+    <div class="oo-check" id="oo-check" aria-hidden="true" hidden>&#10003;</div>
+    <h2 class="h-display h3 oo-title" id="oo-title"></h2>
+    <p class="small oo-sub" id="oo-sub"></p>
+    <div class="oo-live sr-only" id="oo-live" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div class="oo-notice" id="oo-notice" hidden>
+      <strong>Important:</strong> Please tap Send on WhatsApp to complete your verification. Your order cannot be confirmed until you send the message.
+    </div>
+    <div class="oo-actions" id="oo-actions" hidden>
+      <a class="btn btn-primary btn-block" id="oo-wa-btn" href="#" target="_blank" rel="noopener">Open WhatsApp to Complete Verification</a>
+      <a class="btn btn-primary btn-block" id="oo-view-btn" href="#" hidden>DONE — CONTINUE</a>
+    </div>
+  </div>
+</div>
+
+<style>
+  .checkout-layout{ display:grid; gap:1.5rem; grid-template-columns:1fr; align-items:start; }
+  @media (min-width:900px){ .checkout-layout{ grid-template-columns: 1.6fr 1fr; gap:2.5rem; } }
+  .summary-row{ display:flex; justify-content:space-between; font-size:0.92rem; padding:0.35rem 0; color:var(--ink-soft); }
+  .summary-total{ color:var(--ink); font-weight:700; font-size:1.05rem; }
+  .co-line{ display:flex; justify-content:space-between; font-size:0.85rem; padding:0.3rem 0; gap:0.5rem; }
+  .co-line span:first-child{ color:var(--ink-soft); }
+  .cod-note{ background:var(--paper-2); border-radius:var(--radius-sm); padding:0.8rem; margin-top:0.8rem; }
+
+  /* Order processing overlay (page-local; uses existing ORÈVA tokens) */
+  .oo[hidden]{ display:none; }
+  .oo{ position:fixed; inset:0; z-index:10000; background:rgba(239,237,230,0.97); display:flex; align-items:center; justify-content:center; padding:1.2rem; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .oo-box{ width:100%; max-width:480px; text-align:center; margin:auto; padding:1rem 0; }
+  .oo-spinner{ width:44px; height:44px; margin:0 auto 1.4rem; border:3px solid var(--line); border-top-color:var(--moss); border-radius:50%; animation:oo-spin 0.9s linear infinite; }
+  .oo-spinner[hidden], .oo-check[hidden], .oo-notice[hidden], .oo-actions[hidden], #oo-view-btn[hidden]{ display:none; }
+  .oo-check{ width:48px; height:48px; margin:0 auto 1.4rem; border-radius:50%; background:var(--moss); color:var(--paper); font-size:1.5rem; line-height:48px; }
+  .oo-title{ color:var(--ink); }
+  .oo-sub{ margin-top:0.6rem; color:var(--ink-soft); }
+  .oo-notice{ margin-top:1.4rem; padding:1rem 1.1rem; text-align:left; background:#F3E7D6; border:1px solid var(--brass); border-left:4px solid var(--brass); border-radius:var(--radius-md); color:#5E4519; font-size:1rem; line-height:1.5; }
+  .oo-actions{ margin-top:1.4rem; display:flex; flex-direction:column; gap:0.7rem; }
+  .sr-only{ position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+  @keyframes oo-spin{ to{ transform:rotate(360deg); } }
+  @media (prefers-reduced-motion:reduce){ .oo-spinner{ animation-duration:2.4s; } }
+</style>
+
+<script type="module">
+  import { renderHeader, renderFooter, applyBackground, formatINR, toast } from './js/ui.js';
+  import { getCart, cartTotals, clearCart } from './js/cart.js';
+  import { onUserReady, getCurrentUser } from './js/auth.js';
+  import { createOrder, buildWhatsAppUrl } from './js/orders.js?v=wa1';
+  import { db, doc, getDoc } from './js/firebase-config.js';
+
+  renderHeader('checkout.html');
+  renderFooter();
+  applyBackground();
+
+  const cart = getCart();
+  if (!cart.length) {
+    document.getElementById('checkout-empty').hidden = false;
+  } else {
+    document.getElementById('checkout-form').hidden = false;
+    document.getElementById('checkout-lines').innerHTML = cart.map(item => `
+      <div class="co-line"><span>${item.name}${item.size ? ' ('+item.size+')' : ''} × ${item.qty}</span><span>${formatINR(item.price*item.qty)}</span></div>
+    `).join('');
+    const { subtotal, shippingCharge, total } = cartTotals();
+    document.getElementById('co-subtotal').textContent = formatINR(subtotal);
+    document.getElementById('co-shipping').textContent = shippingCharge > 0 ? formatINR(shippingCharge) : 'Free';
+    document.getElementById('co-total').textContent = formatINR(total);
+  }
+
+  onUserReady(async (user) => {
+    if (user && !user.isAnonymous) {
+      document.getElementById('f-email').value = user.email || '';
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        if (snap.exists()) document.getElementById('f-name').value = snap.data().profileName || '';
+      } catch(e){}
+    }
+  });
+
+  // ---------- Order processing overlay ----------
+  const overlay = document.getElementById('order-overlay');
+  const $ = (id) => document.getElementById(id);
+  let submitting = false;       // blocks double submits while an order is in flight
+  let savedOrder = null;        // set once Firestore write succeeded; never create a second one
+
+  function setStage({ title, sub = '', spinner = true, check = false }){
+    $('oo-title').textContent = title;
+    $('oo-sub').textContent = sub;
+    $('oo-spinner').hidden = !spinner;
+    $('oo-check').hidden = !check;
+    $('oo-live').textContent = sub ? `${title} ${sub}` : title;
+  }
+  function showOverlay(){
+    overlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+  function hideOverlay(){
+    overlay.hidden = true;
+    document.body.style.overflow = '';
+    $('oo-notice').hidden = true;
+    $('oo-actions').hidden = true;
+  }
+  const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+  // --- WhatsApp hand-off state (module-level, so it survives the back/forward cache) ---
+  let waLaunched = false;      // WhatsApp has been (or is being) opened
+  let waAutoCancelled = false; // customer tapped the WhatsApp button themselves during the wait
+  let afterWaShown = false;    // "after WhatsApp" screen already applied (idempotent)
+  let afterWaTimer = null;
+
+  // Where DONE — CONTINUE goes. My Orders requires a real (non-anonymous) sign-in, so
+  // guest checkouts go to their own order page instead of a "please sign in" dead end.
+  function continueUrl(order){
+    const u = getCurrentUser();
+    return (u && !u.isAnonymous) ? 'my-orders.html' : `order-confirmation.html?id=${order.id}`;
+  }
+
+  // Swap the screen to its "back from WhatsApp" state. Pure UI: it never touches Firestore,
+  // never submits the form and never changes verificationStatus.
+  function showAfterWhatsApp(){
+    if (!waLaunched || afterWaShown) return;
+    afterWaShown = true;
+    clearTimeout(afterWaTimer);
+    setStage({
+      title: 'Did you send the WhatsApp message?',
+      sub: 'Your order is saved. It will show as Pending Verification until our team checks your message.',
+      spinner: false,
+    });
+    $('oo-notice').hidden = false;
+    $('oo-view-btn').hidden = false;               // primary action
+    const wa = $('oo-wa-btn');                      // keep a way to (re)open WhatsApp
+    wa.textContent = 'Open WhatsApp again';
+    wa.classList.remove('btn-primary');
+    wa.classList.add('btn-outline');
+    $('oo-actions').hidden = false;
+  }
+  function markWhatsAppLaunched(){
+    waLaunched = true;
+    // Backup in case no lifecycle event fires (the tab stays alive and visible).
+    clearTimeout(afterWaTimer);
+    afterWaTimer = setTimeout(showAfterWhatsApp, 2500);
+  }
+  // Registered once (module scope). Idempotent handlers, no order logic.
+  document.addEventListener('visibilitychange', showAfterWhatsApp);
+  window.addEventListener('pageshow', (ev) => { if (ev.persisted) showAfterWhatsApp(); });
+  $('oo-wa-btn').addEventListener('click', () => { waAutoCancelled = true; markWhatsAppLaunched(); });
+
+  async function goToWhatsApp(order){
+    const waUrl = buildWhatsAppUrl(order);
+    const confirmUrl = `order-confirmation.html?id=${order.id}`;
+    setStage({ title: 'Redirecting you to WhatsApp for final verification...', sub: 'Your order is saved. WhatsApp verification is still pending.' });
+    $('oo-notice').hidden = false;
+    // Fallback controls are available immediately so the customer is never stuck.
+    $('oo-wa-btn').href = waUrl;
+    $('oo-view-btn').href = continueUrl(order);
+    $('oo-actions').hidden = false;
+    await wait(4000);
+    if (waAutoCancelled) return; // customer already opened WhatsApp via the button
+    // Same-tab navigation. Point this history entry at the confirmation page first, so
+    // returning from WhatsApp (Back / reload) lands on the order, not an empty checkout.
+    try { history.replaceState(null, '', confirmUrl); } catch (e) { console.error(e); }
+    markWhatsAppLaunched();
+    window.location.assign(waUrl);
+  }
+
+  document.getElementById('checkout-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+    const btn = document.getElementById('place-order-btn');
+
+    const name = document.getElementById('f-name').value.trim();
+    const email = document.getElementById('f-email').value.trim();
+    const phone = document.getElementById('f-phone').value.trim();
+    const address = document.getElementById('f-address').value.trim();
+    const city = document.getElementById('f-city').value.trim();
+    const state = document.getElementById('f-state').value.trim();
+    const pincode = document.getElementById('f-pincode').value.trim();
+
+    // Existing phone validation (unchanged), run before anything is locked or shown.
+    if (!/^[0-9]{10}$/.test(phone.replace(/\D/g,'').slice(-10))) {
+      toast('Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    submitting = true;
+    btn.disabled = true;
+    btn.textContent = 'Placing Order…';
+
+    // Retry after a completed save (e.g. a later step failed): reuse it, never duplicate.
+    if (savedOrder) { await goToWhatsApp(savedOrder); return; }
+
+    const cart = getCart();
+    const { subtotal, shippingCharge } = cartTotals();
+    const items = cart.map(c => ({ productId: c.id, name: c.name, price: c.price, qty: c.qty, size: c.size || '', image: c.image || '' }));
+
+    // STAGE A — saving
+    showOverlay();
+    setStage({ title: 'Sending your order details to Firebase...', sub: 'Please do not close or refresh this page.' });
+    const slowTimer = setTimeout(() => {
+      setStage({ title: 'Sending your order details to Firebase...', sub: 'This is taking longer than usual. Please check your internet connection and keep this page open.' });
+    }, 15000);
+
+    let order;
+    try {
+      const user = getCurrentUser();
+      order = await createOrder({
+        user, customerName: name, customerEmail: email, phone,
+        shippingAddress: { name, phone, addressLine: address, city, state, pincode },
+        items, subtotal, shippingCharge,
+      });
+    } catch (err) {
+      // Firestore write failed: no WhatsApp, no success message, cart untouched.
+      clearTimeout(slowTimer);
+      console.error('Order save failed:', err);
+      hideOverlay();
+      toast('Could not place your order. Please try again.');
+      submitting = false;
+      btn.disabled = false;
+      btn.textContent = 'Place Order';
+      return;
+    }
+    clearTimeout(slowTimer);
+    savedOrder = order;
+
+    // STAGE B — saved (Firebase only; WhatsApp verification still pending)
+    try { clearCart(); } catch (err) { console.error('Could not clear cart:', err); }
+    setStage({ title: 'Order successfully confirmed in Firebase! ✔️', sub: 'WhatsApp verification is still pending.', spinner: false, check: true });
+    await wait(1500);
+
+    // STAGE C — WhatsApp
+    try {
+      await goToWhatsApp(order);
+    } catch (err) {
+      console.error('WhatsApp redirect failed:', err);
+      $('oo-wa-btn').href = buildWhatsAppUrl(order);
+      $('oo-view-btn').href = continueUrl(order);
+      $('oo-notice').hidden = false;
+      $('oo-actions').hidden = false;
+      $('oo-spinner').hidden = true;
+    }
+  });
+</script>
+
+</body>
+</html>
