@@ -41,6 +41,8 @@
           <div class="summary-row summary-total"><span>Total</span><span id="oc-total"></span></div>
         </div>
 
+        <div id="oc-verification"></div>
+
         <div class="card mt-2">
           <span class="small" style="font-weight:600;color:var(--ink)">Delivering To</span>
           <p class="small mt-1" id="oc-address"></p>
@@ -71,7 +73,7 @@
 
 <script type="module">
   import { renderHeader, renderFooter, applyBackground, formatINR, formatDate } from './js/ui.js';
-  import { fetchOrderById } from './js/orders.js';
+  import { fetchOrderById, verificationSectionHTML } from './js/orders.js?v=wa1';
   import './js/auth.js';
 
   renderHeader('');
@@ -96,6 +98,7 @@
     document.getElementById('oc-total').textContent = formatINR(order.totalAmount);
     const a = order.shippingAddress || {};
     document.getElementById('oc-address').textContent = `${a.name || ''}, ${a.addressLine || ''}, ${a.city || ''}, ${a.state || ''} - ${a.pincode || ''} · ${a.phone || ''}`;
+    document.getElementById('oc-verification').innerHTML = verificationSectionHTML(order);
     document.getElementById('oc-track-link').href = `track-order.html?id=${order.id}`;
   })();
 </script>
