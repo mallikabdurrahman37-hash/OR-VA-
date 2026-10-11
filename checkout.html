@@ -89,6 +89,23 @@
 
 <div id="site-footer"></div>
 
+<div id="order-overlay" class="oo" role="dialog" aria-modal="true" aria-labelledby="oo-title" hidden>
+  <div class="oo-box">
+    <div class="oo-spinner" id="oo-spinner" aria-hidden="true"></div>
+    <div class="oo-check" id="oo-check" aria-hidden="true" hidden>&#10003;</div>
+    <h2 class="h-display h3 oo-title" id="oo-title"></h2>
+    <p class="small oo-sub" id="oo-sub"></p>
+    <div class="oo-live sr-only" id="oo-live" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div class="oo-notice" id="oo-notice" hidden>
+      <strong>Important:</strong> Please tap Send on WhatsApp to complete your verification. Your order cannot be confirmed until you send the message.
+    </div>
+    <div class="oo-actions" id="oo-actions" hidden>
+      <a class="btn btn-primary btn-block" id="oo-wa-btn" href="#" target="_blank" rel="noopener">Open WhatsApp to Complete Verification</a>
+      <a class="btn btn-outline btn-block" id="oo-view-btn" href="#">View My Order</a>
+    </div>
+  </div>
+</div>
+
 <style>
   .checkout-layout{ display:grid; gap:1.5rem; grid-template-columns:1fr; align-items:start; }
   @media (min-width:900px){ .checkout-layout{ grid-template-columns: 1.6fr 1fr; gap:2.5rem; } }
@@ -97,13 +114,28 @@
   .co-line{ display:flex; justify-content:space-between; font-size:0.85rem; padding:0.3rem 0; gap:0.5rem; }
   .co-line span:first-child{ color:var(--ink-soft); }
   .cod-note{ background:var(--paper-2); border-radius:var(--radius-sm); padding:0.8rem; margin-top:0.8rem; }
+
+  /* Order processing overlay (page-local; uses existing ORÈVA tokens) */
+  .oo[hidden]{ display:none; }
+  .oo{ position:fixed; inset:0; z-index:10000; background:rgba(239,237,230,0.97); display:flex; align-items:center; justify-content:center; padding:1.2rem; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+  .oo-box{ width:100%; max-width:480px; text-align:center; margin:auto; padding:1rem 0; }
+  .oo-spinner{ width:44px; height:44px; margin:0 auto 1.4rem; border:3px solid var(--line); border-top-color:var(--moss); border-radius:50%; animation:oo-spin 0.9s linear infinite; }
+  .oo-spinner[hidden], .oo-check[hidden], .oo-notice[hidden], .oo-actions[hidden]{ display:none; }
+  .oo-check{ width:48px; height:48px; margin:0 auto 1.4rem; border-radius:50%; background:var(--moss); color:var(--paper); font-size:1.5rem; line-height:48px; }
+  .oo-title{ color:var(--ink); }
+  .oo-sub{ margin-top:0.6rem; color:var(--ink-soft); }
+  .oo-notice{ margin-top:1.4rem; padding:1rem 1.1rem; text-align:left; background:#F3E7D6; border:1px solid var(--brass); border-left:4px solid var(--brass); border-radius:var(--radius-md); color:#5E4519; font-size:1rem; line-height:1.5; }
+  .oo-actions{ margin-top:1.4rem; display:flex; flex-direction:column; gap:0.7rem; }
+  .sr-only{ position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+  @keyframes oo-spin{ to{ transform:rotate(360deg); } }
+  @media (prefers-reduced-motion:reduce){ .oo-spinner{ animation-duration:2.4s; } }
 </style>
 
 <script type="module">
   import { renderHeader, renderFooter, applyBackground, formatINR, toast } from './js/ui.js';
   import { getCart, cartTotals, clearCart } from './js/cart.js';
   import { onUserReady, getCurrentUser } from './js/auth.js';
-  import { createOrder } from './js/orders.js';
+  import { createOrder, buildWhatsAppUrl } from './js/orders.js?v=wa1';
   import { db, doc, getDoc } from './js/firebase-config.js';
 
   renderHeader('checkout.html');
@@ -134,11 +166,54 @@
     }
   });
 
+  // ---------- Order processing overlay ----------
+  const overlay = document.getElementById('order-overlay');
+  const $ = (id) => document.getElementById(id);
+  let submitting = false;       // blocks double submits while an order is in flight
+  let savedOrder = null;        // set once Firestore write succeeded; never create a second one
+
+  function setStage({ title, sub = '', spinner = true, check = false }){
+    $('oo-title').textContent = title;
+    $('oo-sub').textContent = sub;
+    $('oo-spinner').hidden = !spinner;
+    $('oo-check').hidden = !check;
+    $('oo-live').textContent = sub ? `${title} ${sub}` : title;
+  }
+  function showOverlay(){
+    overlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+  function hideOverlay(){
+    overlay.hidden = true;
+    document.body.style.overflow = '';
+    $('oo-notice').hidden = true;
+    $('oo-actions').hidden = true;
+  }
+  const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+  async function goToWhatsApp(order){
+    const waUrl = buildWhatsAppUrl(order);
+    const confirmUrl = `order-confirmation.html?id=${order.id}`;
+    setStage({ title: 'Redirecting you to WhatsApp for final verification...', sub: 'Your order is saved. WhatsApp verification is still pending.' });
+    $('oo-notice').hidden = false;
+    // Fallback controls are available immediately so the customer is never stuck.
+    $('oo-wa-btn').href = waUrl;
+    $('oo-view-btn').href = confirmUrl;
+    $('oo-actions').hidden = false;
+    await wait(4000);
+    // Same-tab navigation. Point this history entry at the confirmation page first, so
+    // returning from WhatsApp (Back / reload) lands on the order, not an empty checkout.
+    try { history.replaceState(null, '', confirmUrl); } catch (e) { console.error(e); }
+    window.location.assign(waUrl);
+  }
+
+  // If the browser restores this page from the back/forward cache after WhatsApp,
+  // the overlay is still showing the recovery buttons — nothing else to do.
+
   document.getElementById('checkout-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (submitting) return;
     const btn = document.getElementById('place-order-btn');
-    btn.disabled = true;
-    btn.textContent = 'Placing Order…';
 
     const name = document.getElementById('f-name').value.trim();
     const email = document.getElementById('f-email').value.trim();
@@ -148,30 +223,67 @@
     const state = document.getElementById('f-state').value.trim();
     const pincode = document.getElementById('f-pincode').value.trim();
 
+    // Existing phone validation (unchanged), run before anything is locked or shown.
     if (!/^[0-9]{10}$/.test(phone.replace(/\D/g,'').slice(-10))) {
       toast('Please enter a valid 10-digit phone number');
-      btn.disabled = false; btn.textContent = 'Place Order';
       return;
     }
+
+    submitting = true;
+    btn.disabled = true;
+    btn.textContent = 'Placing Order…';
+
+    // Retry after a completed save (e.g. a later step failed): reuse it, never duplicate.
+    if (savedOrder) { await goToWhatsApp(savedOrder); return; }
 
     const cart = getCart();
     const { subtotal, shippingCharge } = cartTotals();
     const items = cart.map(c => ({ productId: c.id, name: c.name, price: c.price, qty: c.qty, size: c.size || '', image: c.image || '' }));
 
+    // STAGE A — saving
+    showOverlay();
+    setStage({ title: 'Sending your order details to Firebase...', sub: 'Please do not close or refresh this page.' });
+    const slowTimer = setTimeout(() => {
+      setStage({ title: 'Sending your order details to Firebase...', sub: 'This is taking longer than usual. Please check your internet connection and keep this page open.' });
+    }, 15000);
+
+    let order;
     try {
       const user = getCurrentUser();
-      const order = await createOrder({
+      order = await createOrder({
         user, customerName: name, customerEmail: email, phone,
         shippingAddress: { name, phone, addressLine: address, city, state, pincode },
         items, subtotal, shippingCharge,
       });
-      clearCart();
-      window.location.href = `order-confirmation.html?id=${order.id}`;
     } catch (err) {
-      console.error(err);
+      // Firestore write failed: no WhatsApp, no success message, cart untouched.
+      clearTimeout(slowTimer);
+      console.error('Order save failed:', err);
+      hideOverlay();
       toast('Could not place your order. Please try again.');
+      submitting = false;
       btn.disabled = false;
       btn.textContent = 'Place Order';
+      return;
+    }
+    clearTimeout(slowTimer);
+    savedOrder = order;
+
+    // STAGE B — saved (Firebase only; WhatsApp verification still pending)
+    try { clearCart(); } catch (err) { console.error('Could not clear cart:', err); }
+    setStage({ title: 'Order successfully confirmed in Firebase! ✔️', sub: 'WhatsApp verification is still pending.', spinner: false, check: true });
+    await wait(1500);
+
+    // STAGE C — WhatsApp
+    try {
+      await goToWhatsApp(order);
+    } catch (err) {
+      console.error('WhatsApp redirect failed:', err);
+      $('oo-wa-btn').href = buildWhatsAppUrl(order);
+      $('oo-view-btn').href = `order-confirmation.html?id=${order.id}`;
+      $('oo-notice').hidden = false;
+      $('oo-actions').hidden = false;
+      $('oo-spinner').hidden = true;
     }
   });
 </script>
