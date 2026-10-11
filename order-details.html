@@ -43,7 +43,7 @@
 
 <script type="module">
   import { renderHeader, renderFooter, applyBackground, formatDate, formatINR, toast } from './js/ui.js';
-  import { fetchOrderById, STAGES, stageIndex, canCancel, requestCancellation } from './js/orders.js';
+  import { fetchOrderById, STAGES, stageIndex, canCancel, requestCancellation, verificationSectionHTML } from './js/orders.js?v=wa1';
   import './js/auth.js';
 
   renderHeader('');
@@ -72,6 +72,8 @@
       <p class="small mt-1">Placed ${formatDate(order.orderDate)} · Expected delivery ${formatDate(order.expectedDelivery)}</p>
 
       ${order.delayNote ? `<div class="card mt-2" style="background:#F3E7D6;border-color:#E4CBA0"><p class="small" style="color:#7A5A24">${order.delayNote}</p></div>` : ''}
+
+      ${verificationSectionHTML(order)}
 
       ${!cancelled ? `<div class="card mt-2"><div class="timeline">
         ${STAGES.map((s,i) => `
